@@ -1,0 +1,6 @@
+{
+  "name": "Siembra - Huerto y Riego Consciente",
+  "description": "Aplicación para familias con huerto o macetas: registro de cultivos con fecha de siembra, calendario de riego por necesidad y aviso de día estimado de cosecha.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
