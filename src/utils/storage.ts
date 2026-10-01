@@ -42,38 +42,54 @@ function generarCultivosIniciales(): Cultivo[] {
       id: 'demo-3',
       nombre: 'Albahaca Genovesa',
       tipoEspacio: 'maceta',
-      // Sembrada hace 50 días (¡cosecha inminente en 5 días!)
+      // Sembrada hace 50 días (cosecha inminente)
       fechaSiembra: sumarDiasAFecha(hoy, -50),
       frecuenciaRiegoDias: 2,
       diasHastaCosecha: 55,
-      // Regada hoy
       ultimoRiego: hoy,
       historialRiegos: [sumarDiasAFecha(hoy, -2), hoy],
+      cosechado: false,
       notas: 'Junto a los tomates para repeler plagas.',
+    },
+    {
+      id: 'demo-4',
+      nombre: 'Rabanitos Picantes',
+      tipoEspacio: 'maceta',
+      fechaSiembra: sumarDiasAFecha(hoy, -32),
+      frecuenciaRiegoDias: 2,
+      diasHastaCosecha: 28,
+      ultimoRiego: sumarDiasAFecha(hoy, -4),
+      historialRiegos: [sumarDiasAFecha(hoy, -6), sumarDiasAFecha(hoy, -4)],
+      cosechado: true,
+      fechaCosechaReal: sumarDiasAFecha(hoy, -3),
+      notas: '¡Salieron crujientes para la ensalada familiar!',
     },
   ];
 }
 
 /**
- * Lee los cultivos desde LocalStorage con manejo defensivo de errores
- * (JSON corrupto o almacenamiento deshabilitado en navegadores estrictos).
+ * Lee los cultivos desde LocalStorage con manejo defensivo de errores.
+ * ⚠️ ATENCIÓN: Si data existe y es un array (incluso vacío []), se respeta
+ * para evitar sobreescribir las decisiones del usuario al refrescar la página.
  */
 export function cargarCultivos(): Cultivo[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) {
+    if (data === null) {
+      // Primera vez que se abre la app en este navegador
       const iniciales = generarCultivosIniciales();
       guardarCultivos(iniciales);
       return iniciales;
     }
+
     const parsed = JSON.parse(data);
-    if (Array.isArray(parsed) && parsed.length > 0) {
+    if (Array.isArray(parsed)) {
       return parsed;
     }
     return generarCultivosIniciales();
   } catch (error) {
     console.error('Error al leer de localStorage:', error);
-    return generarCultivosIniciales();
+    return [];
   }
 }
 

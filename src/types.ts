@@ -37,6 +37,16 @@ export interface Cultivo {
   historialRiegos: string[];
 
   /**
+   * Indica si el cultivo ya fue cosechado o sigue activo en el huerto/maceta.
+   */
+  cosechado?: boolean;
+
+  /**
+   * Fecha en la que se realizó la cosecha efectiva ('YYYY-MM-DD').
+   */
+  fechaCosechaReal?: string;
+
+  /**
    * Notas opcionales de la familia (ej: "Macetón de terracota en el patio").
    */
   notas?: string;

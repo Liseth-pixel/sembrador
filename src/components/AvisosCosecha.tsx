@@ -11,13 +11,18 @@ import { Sparkles, Calendar, Clock, CheckCircle, Sprout, AlertTriangle } from 'l
 interface Props {
   cultivos: Cultivo[];
   onSeleccionarCultivo?: (cultivoId: string) => void;
+  onCosechar?: (cultivoId: string) => void;
 }
 
-export const AvisosCosecha: React.FC<Props> = ({ cultivos }) => {
+export const AvisosCosecha: React.FC<Props> = ({ cultivos, onCosechar }) => {
   const hoyISO = obtenerHoyISO();
 
-  // Ordenamos los cultivos por proximidad de cosecha (los más cercanos primero)
-  const cultivosOrdenados = [...cultivos].sort((a, b) => {
+  // Filtrar activos y cosechados
+  const activos = cultivos.filter((c) => !c.cosechado);
+  const cosechados = cultivos.filter((c) => Boolean(c.cosechado));
+
+  // Ordenamos los cultivos activos por proximidad de cosecha (los más cercanos primero)
+  const activosOrdenados = [...activos].sort((a, b) => {
     const estadoA = obtenerEstadoCosecha(a.fechaSiembra, a.diasHastaCosecha);
     const estadoB = obtenerEstadoCosecha(b.fechaSiembra, b.diasHastaCosecha);
     return estadoA.diasRestantes - estadoB.diasRestantes;
@@ -49,7 +54,7 @@ export const AvisosCosecha: React.FC<Props> = ({ cultivos }) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {cultivosOrdenados.map((cultivo) => {
+          {activosOrdenados.map((cultivo) => {
             const estadoCosecha = obtenerEstadoCosecha(cultivo.fechaSiembra, cultivo.diasHastaCosecha);
             const diasDesdeSiembra = Math.max(0, calcularDiferenciaDias(cultivo.fechaSiembra, hoyISO));
 
@@ -140,10 +145,57 @@ export const AvisosCosecha: React.FC<Props> = ({ cultivos }) => {
                   <p className="text-xs text-stone-400 bg-stone-950/40 p-2.5 rounded-xl border border-stone-800/60 leading-relaxed">
                     💡 <strong>Diagnóstico:</strong> {estadoCosecha.mensaje}
                   </p>
+
+                  {/* Botón para cosechar si está listo o próximo */}
+                  {onCosechar && (
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => onCosechar(cultivo.id)}
+                        className={`min-h-[44px] w-full flex items-center justify-center gap-2 rounded-xl text-xs font-semibold transition-all ${
+                          esLista
+                            ? 'bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-md shadow-amber-950/30 font-bold'
+                            : 'bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-700'
+                        }`}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        <span>{esLista ? '¡Cosechar hoy y guardar en historial!' : 'Cosechar anticipadamente'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
+
+          {/* Historial de cosechados guardados en localStorage */}
+          {cosechados.length > 0 && (
+            <div className="pt-6 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1.5">
+                <span>🌾</span>
+                <span>Cultivos cosechados ({cosechados.length})</span>
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {cosechados.map((c) => (
+                  <div key={c.id} className="p-3.5 bg-stone-900/60 border border-stone-800/80 rounded-xl space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-stone-200">{c.nombre}</span>
+                      <span className="text-[11px] text-amber-400 font-medium">Cosechado</span>
+                    </div>
+                    <div className="text-xs text-stone-500 flex items-center gap-2">
+                      <span>Sembrado: {formatearFechaEspanol(c.fechaSiembra)}</span>
+                      {c.fechaCosechaReal && (
+                        <>
+                          <span>·</span>
+                          <span>Recolectado: {formatearFechaEspanol(c.fechaCosechaReal)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -103,12 +103,54 @@ export default function App() {
     }
   };
 
+  /**
+   * 3. MARCAR CULTIVO COMO COSECHADO (PERSISTENCIA DE COSECHADOS)
+   */
+  const handleCosecharCultivo = (cultivoId: string) => {
+    setCultivos((prev) =>
+      prev.map((c) =>
+        c.id === cultivoId
+          ? { ...c, cosechado: true, fechaCosechaReal: hoyISO }
+          : c
+      )
+    );
+    const cultivo = cultivos.find((c) => c.id === cultivoId);
+    mostrarToast(`🌾 ¡Cosecha guardada para ${cultivo?.nombre || 'el cultivo'}!`);
+  };
+
+  /**
+   * REACTIVAR CULTIVO COSECHADO AL ESTADO ACTIVO
+   */
+  const handleReactivarCultivo = (cultivoId: string) => {
+    setCultivos((prev) =>
+      prev.map((c) =>
+        c.id === cultivoId
+          ? { ...c, cosechado: false, fechaCosechaReal: undefined }
+          : c
+      )
+    );
+    mostrarToast('Cultivo reactivado en el huerto');
+  };
+
+  // Filtro de visualización en la pestaña de cultivos
+  const [filtroEstado, setFiltroEstado] = useState<'activos' | 'cosechados' | 'todos'>('activos');
+
+  const cultivosActivos = cultivos.filter((c) => !c.cosechado);
+  const cultivosCosechados = cultivos.filter((c) => Boolean(c.cosechado));
+
+  const cultivosParaMostrar =
+    filtroEstado === 'activos'
+      ? cultivosActivos
+      : filtroEstado === 'cosechados'
+      ? cultivosCosechados
+      : cultivos;
+
   // Contadores para resumen rápido familiar
-  const cultivosQueNecesitanRiegoHoy = cultivos.filter(
+  const cultivosQueNecesitanRiegoHoy = cultivosActivos.filter(
     (c) => obtenerEstadoRiego(c.ultimoRiego, c.frecuenciaRiegoDias).necesitaRiegoHoy
   ).length;
 
-  const cosechasProximas = cultivos.filter((c) => {
+  const cosechasProximas = cultivosActivos.filter((c) => {
     const estado = obtenerEstadoCosecha(c.fechaSiembra, c.diasHastaCosecha);
     return estado.diasRestantes <= 7;
   }).length;
@@ -261,7 +303,7 @@ export default function App() {
         {/* VISTA 1: MIS CULTIVOS (Registro + Listado con Riego y Cosecha) */}
         {tabActiva === 'cultivos' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-bold text-stone-100">
                   Cultivos de la familia
@@ -270,38 +312,83 @@ export default function App() {
                   Registrá cada siembra para tener su fecha de cosecha y días de riego exactos.
                 </p>
               </div>
+
+              {/* Selector de filtro activos vs cosechados */}
+              <div className="flex items-center p-1 bg-stone-900 border border-stone-800 rounded-xl shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setFiltroEstado('activos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filtroEstado === 'activos'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  Activos ({cultivosActivos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroEstado('cosechados')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filtroEstado === 'cosechados'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  Cosechados ({cultivosCosechados.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroEstado('todos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filtroEstado === 'todos'
+                      ? 'bg-stone-800 text-stone-100 shadow-sm'
+                      : 'text-stone-400 hover:text-stone-200'
+                  }`}
+                >
+                  Todos ({cultivos.length})
+                </button>
+              </div>
             </div>
 
-            {cultivos.length === 0 ? (
+            {cultivosParaMostrar.length === 0 ? (
               <div className="text-center py-16 px-4 bg-stone-900 border border-stone-800 rounded-3xl space-y-4">
                 <div className="w-14 h-14 bg-stone-800 rounded-2xl flex items-center justify-center mx-auto text-stone-500">
                   <Sprout className="w-7 h-7" />
                 </div>
                 <div className="space-y-1 max-w-sm mx-auto">
                   <h3 className="text-base font-semibold text-stone-200">
-                    Tu huerto está esperando
+                    {filtroEstado === 'cosechados'
+                      ? 'No hay cultivos cosechados todavía'
+                      : 'Tu huerto está esperando'}
                   </h3>
                   <p className="text-xs text-stone-400 leading-relaxed">
-                    Registrá tu primer cultivo con su fecha de siembra para ver el calendario de riego y la estimación de cosecha.
+                    {filtroEstado === 'cosechados'
+                      ? 'A medida que recolectes tus plantas, quedarán archivadas aquí con persistencia en tu navegador.'
+                      : 'Registrá tu primer cultivo con su fecha de siembra para ver el calendario de riego y la estimación de cosecha.'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setModalRegistroAbierto(true)}
-                  className="min-h-[48px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 shadow-lg shadow-emerald-950/40"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Registrar primer cultivo</span>
-                </button>
+                {filtroEstado !== 'cosechados' && (
+                  <button
+                    type="button"
+                    onClick={() => setModalRegistroAbierto(true)}
+                    className="min-h-[48px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 shadow-lg shadow-emerald-950/40"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Registrar primer cultivo</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {cultivos.map((cultivo) => (
+                {cultivosParaMostrar.map((cultivo) => (
                   <TarjetaCultivo
                     key={cultivo.id}
                     cultivo={cultivo}
                     onRegar={handleRegarCultivo}
                     onEliminar={handleEliminarCultivo}
+                    onCosechar={handleCosecharCultivo}
+                    onReactivar={handleReactivarCultivo}
                   />
                 ))}
               </div>
@@ -309,17 +396,20 @@ export default function App() {
           </div>
         )}
 
-        {/* VISTA 2: CALENDARIO DE RIEGO POR CULTIVO */}
+        {/* VISTA 2: CALENDARIO DE RIEGO POR CULTIVO (Muestra cultivos activos que necesitan riego) */}
         {tabActiva === 'calendario' && (
           <CalendarioRiego
-            cultivos={cultivos}
+            cultivos={cultivosActivos}
             onRegarCultivo={handleRegarCultivo}
           />
         )}
 
         {/* VISTA 3: AVISO DEL DÍA ESTIMADO DE COSECHA */}
         {tabActiva === 'cosecha' && (
-          <AvisosCosecha cultivos={cultivos} />
+          <AvisosCosecha
+            cultivos={cultivos}
+            onCosechar={handleCosecharCultivo}
+          />
         )}
       </main>
 
